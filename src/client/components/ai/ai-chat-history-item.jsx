@@ -22,6 +22,7 @@ export default function AIChatHistoryItem ({ item }) {
   const {
     prompt,
     sessionId,
+    nameAI,
     modelAI,
     roleAI,
     baseURLAI,
@@ -172,7 +173,6 @@ export default function AIChatHistoryItem ({ item }) {
           {showOutput ? <CaretDownOutlined /> : <CaretRightOutlined />}
         </span>
         <span>{prompt}</span>
-        {renderStopButton()}
       </div>
     ),
     type: 'info'
@@ -190,6 +190,11 @@ export default function AIChatHistoryItem ({ item }) {
   function renderTitle () {
     return (
       <div>
+        {nameAI && (
+          <p>
+            <b>Name:</b> {nameAI}
+          </p>
+        )}
         <p>
           <b>Model:</b> {modelAI}
         </p>
@@ -238,6 +243,7 @@ export default function AIChatHistoryItem ({ item }) {
       </div>
       {renderToolCalls()}
       {showOutput && <AIOutput item={item} />}
+      {renderStopButton()}
     </div>
   )
 }

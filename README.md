@@ -22,13 +22,14 @@
 
 [![DigitalOcean Referral Badge](https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%202.svg)](https://www.digitalocean.com/?refcode=c10bcb28b846&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
 
-[![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)](https://vercel.com/oss)
+[![Vercel OSS Program](https://github.com/electerm/electerm-resource/blob/master/static/images/vercel-oss-2005.png?raw=true)](https://oss-directory.vercel.app)
 
 Open-sourced terminal/ssh/sftp/telnet/serialport/RDP/VNC/Spice/ftp client(linux, mac, win).
 
-For experienced developers, you may try the web app version running in browser(including mobile device): [electerm-web](https://github.com/electerm/electerm-web) or [docker image for electerm-web](https://github.com/electerm/electerm-web-docker)
-
-Online demo: [https://electerm-demo.html5beta.com](https://electerm-demo.html5beta.com)
+- [electerm-web](https://github.com/electerm/electerm-web): web app version running in browser(including mobile device)
+- [electerm-web-docker](https://github.com/electerm/electerm-web-docker): docker image for electerm-web
+- [electerm online](https://cloud.electerm.org): Public free online electerm app
+- [electerm demo](https://demo.electerm.org): Online demo
 
 ## Atlas Cloud
 

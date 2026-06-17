@@ -546,7 +546,7 @@ export default class SessionWrapper extends Component {
   }
 
   renderKeepaliveIcon = () => {
-    if (this.isSshDisabled() || !this.props.tab.authType) {
+    if (this.isSshDisabled()) {
       return null
     }
     const { keepaliveEnabled } = this.state
