@@ -27,12 +27,10 @@ import {
   paneMap,
   isMac, maxEditFileSize, ctrlOrCmd
 } from '../../common/constants'
-import findParent from '../../common/find-parent'
 import sorter from '../../common/index-sorter'
 import { getFolderFromFilePath, getLocalFileInfo } from './file-read'
 import { readClipboard, copy as copyToClipboard, hasFileInClipboardText } from '../../common/clipboard'
 import { getDropFileList } from '../../common/file-drop-utils'
-import fs from '../../common/fs'
 import time from '../../common/time'
 import { filesize } from 'filesize'
 import { createTransferProps } from './transfer-common'
@@ -192,33 +190,6 @@ export default class FileSection extends React.Component {
     this.props.addTransferList(res)
   }
 
-  onDrag = () => {}
-
-  onDragEnter = e => {
-    let { target } = e
-    target = findParent(target, '.' + fileItemCls)
-    if (!target) {
-      return e.preventDefault()
-    }
-    this.dropTarget = target
-    target.classList.add(onDragOverCls)
-  }
-
-  onDragExit = () => {}
-
-  onDragLeave = e => {
-    let { target } = e
-    target = findParent(target, '.' + fileItemCls)
-    if (!target) {
-      return e.preventDefault()
-    }
-    target.classList.remove(onDragOverCls)
-  }
-
-  onDragOver = e => {
-    e.preventDefault()
-  }
-
   onDragStart = e => {
     this.props.modifier({
       onDrag: true
@@ -246,6 +217,16 @@ export default class FileSection extends React.Component {
 
   getDropFileList = data => {
     return getDropFileList(data)
+  }
+
+  onDragEnd = () => {
+    this.props.modifier({
+      onDrag: false
+    })
+    removeClass(this.domRef.current, onDragCls, onMultiDragCls)
+    document.querySelectorAll('.' + onDragOverCls).forEach((d) => {
+      removeClass(d, onDragOverCls)
+    })
   }
 
   onDrop = async e => {
@@ -277,17 +258,6 @@ export default class FileSection extends React.Component {
       }
     }
     this.onDropFile(fromFiles, toFile, fromFileManager)
-  }
-
-  onDragEnd = e => {
-    this.props.modifier({
-      onDrag: false
-    })
-    removeClass(this.domRef.current, onDragCls, onMultiDragCls)
-    document.querySelectorAll('.' + onDragOverCls).forEach((d) => {
-      removeClass(d, onDragOverCls)
-    })
-    e && e.dataTransfer && e.dataTransfer.clearData()
   }
 
   onDropFile = async (fromFiles, toFile, fromFileManager) => {
@@ -420,8 +390,8 @@ export default class FileSection extends React.Component {
     const { localPath } = this.props
     const p = resolve(localPath, nameTemp)
     const func = isDirectory
-      ? fs.mkdir
-      : fs.touch
+      ? window.fs.mkdir
+      : window.fs.touch
     const res = await func(p)
       .then(() => true)
       .catch(window.store.onError)
@@ -525,7 +495,7 @@ export default class FileSection extends React.Component {
     this.clearRef()
     const { permission, type, path, name } = file
     const func = type === typeMap.local
-      ? fs.chmod
+      ? window.fs.chmod
       : this.props.sftp.chmod
     const p = resolve(path, name)
     await func(p, permission).catch(window.store.onError)
@@ -575,7 +545,7 @@ export default class FileSection extends React.Component {
     const { localPath } = this.props
     const p1 = resolve(localPath, oldname)
     const p2 = resolve(localPath, newname)
-    await fs.rename(p1, p2).catch(window.store.onError)
+    await window.fs.rename(p1, p2).catch(window.store.onError)
     this.props.localList()
   }
 
@@ -622,7 +592,7 @@ export default class FileSection extends React.Component {
 
   openFile = file => {
     const filePath = resolve(file.path, file.name)
-    fs.openFile(filePath)
+    window.fs.openFile(filePath)
       .catch(window.store.onError)
   }
 
@@ -631,7 +601,7 @@ export default class FileSection extends React.Component {
     if (this.watchingFile) {
       window.pre.ipcOffEvent('file-change', this.onFileChange)
       window.pre.runGlobalAsync('unwatchFile', this.watchingFile)
-      fs.unlink(this.watchingFile).catch(console.log)
+      window.fs.unlink(this.watchingFile).catch(console.log)
       delete this.watchingFile
     }
   }
@@ -650,7 +620,7 @@ export default class FileSection extends React.Component {
       tempPath = window.pre.resolve(
         window.pre.tempDir, `electerm-temp-${id}-${name}`
       )
-      await fs.writeFile(tempPath, text)
+      await window.fs.writeFile(tempPath, text)
     }
     this.watchingFile = tempPath
     this.watchFile(tempPath)
@@ -670,7 +640,7 @@ export default class FileSection extends React.Component {
       tempPath = window.pre.resolve(
         window.pre.tempDir, `electerm-temp-${id}-${name}`
       )
-      await fs.writeFile(tempPath, text)
+      await window.fs.writeFile(tempPath, text)
     }
     this.watchingFile = tempPath
     window.pre.runGlobalAsync('watchFile', tempPath)
@@ -687,7 +657,7 @@ export default class FileSection extends React.Component {
 
   watchFile = async (tempPath) => {
     window.pre.runGlobalAsync('watchFile', tempPath)
-    fs.openFile(tempPath)
+    window.fs.openFile(tempPath)
       .catch(window.store.onError)
     window.pre.showItemInFolder(tempPath)
     window.pre.ipcOnEvent('file-change', this.onFileChange)
@@ -697,16 +667,27 @@ export default class FileSection extends React.Component {
     const {
       path, name
     } = this.state.file
-    const rp = path ? resolve(path, name) : this.props[`${this.props.type}Path`]
+    let rp = path ? resolve(path, name) : this.props[`${this.props.type}Path`]
+    if (this.props.type === typeMap.remote) {
+      rp = this.convertSftpPathToTerminalPath(rp)
+    }
     this.props.tab.pane = paneMap.terminal
     refs.get('term-' + this.props.tab.id)?.cd(rp)
+  }
+
+  convertSftpPathToTerminalPath = (p) => {
+    const m = p.match(/^\/([a-zA-Z]:)(.*)$/)
+    if (m) {
+      return m[1] + m[2].replace(/\//g, '\\')
+    }
+    return p
   }
 
   fetchEditorText = async (path, type) => {
     // const sftp = sftpFunc()
     const text = typeMap.remote === type
       ? await this.props.sftp.readFile(path)
-      : await fs.readFile(path)
+      : await window.fs.readFile(path)
     return text
   }
 
@@ -717,7 +698,7 @@ export default class FileSection extends React.Component {
         text,
         mode
       ).catch(window.store.onError)
-      : await fs.writeFile(
+      : await window.fs.writeFile(
         path,
         text,
         mode
@@ -889,12 +870,13 @@ export default class FileSection extends React.Component {
   downloadFromBrowser = async () => {
     const { path, name, isDirectory } = this.state.file
     const p = resolve(path, name)
+    if (window.et.downloadFromBrowser) {
+      return window.et.downloadFromBrowser(p)
+    }
     const url = '/api/download?path=' + encodeURIComponent(p)
-    const res = await window.fetch(url, {
-      headers: {
-        token: window.store?.config.tokenElecterm
-      }
-    })
+    const res = await window.api.fetch(url)
+      .catch(window.store.onError)
+    if (!res) return
     const blob = await res.blob()
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -1087,7 +1069,7 @@ export default class FileSection extends React.Component {
       res.push({
         func: 'downloadFromBrowser',
         icon: 'DownloadOutlined',
-        text: 'Download from browser'
+        text: e('downloadFromBrowser')
       })
     }
     if (showEdit) {
@@ -1286,15 +1268,6 @@ export default class FileSection extends React.Component {
     const props = {
       className,
       draggable: draggable && !isParent,
-      ...pick(this, [
-        'onDrag',
-        'onDragEnter',
-        'onDragExit',
-        'onDragLeave',
-        'onDragOver',
-        'onDrop',
-        'onDragEnd'
-      ]),
       onDragStart: onDragStart || this.onDragStart,
       'data-id': id,
       id: this.id,

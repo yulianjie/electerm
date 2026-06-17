@@ -5,7 +5,6 @@
 import { dbNames, getData, fetchInitData } from '../common/db'
 import parseInt10 from '../common/parse-int10'
 import { infoTabs, statusMap, defaultEnvLang } from '../common/constants'
-import fs from '../common/fs'
 import generate from '../common/id-with-stamp'
 import { refsStatic } from '../components/common/ref'
 import defaultSettings from '../common/default-setting'
@@ -52,6 +51,20 @@ export async function addTabFromCommandLine (store, opts) {
   if (isHelp) {
     return store.openAbout(infoTabs.cmd)
   }
+  // Check if argv contains a protocol URL (e.g., ssh://user@host)
+  // and use parseQuickConnect for proper parsing
+  if (argv && argv.length) {
+    const protocolUrl = argv.find(arg =>
+      /^(ssh|telnet|rdp|vnc|serial|spice|ftp|http|https|electerm):\/\//i.test(arg)
+    )
+    if (protocolUrl) {
+      const parsed = parseQuickConnect(protocolUrl)
+      if (parsed) {
+        return store.ipcOpenTab(parsed)
+      }
+    }
+  }
+
   const conf = getHost(argv, options)
   const update = {
     passphrase: options.passphrase,
@@ -93,7 +106,7 @@ export async function addTabFromCommandLine (store, opts) {
   }
   Object.assign(conf, update)
   if (options.privateKeyPath) {
-    conf.privateKey = await fs.readFile(options.privateKeyPath)
+    conf.privateKey = await window.fs.readFile(options.privateKeyPath)
   }
   console.debug('command line opts', conf)
   if (

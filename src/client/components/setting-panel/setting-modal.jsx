@@ -11,7 +11,6 @@ import {
   settingMap,
   modals
 } from '../../common/constants'
-
 const TabBookmarks = lazy(() => import('./tab-bookmarks'))
 const TabQuickCommands = lazy(() => import('./tab-quick-commands'))
 const TabSettings = lazy(() => import('./tab-settings'))
